@@ -124,6 +124,11 @@
         safeArea: { top: 0, left: 0, right: w, bottom: h, width: w, height: h }
       };
     },
+    // Open data context (WeChat/QQ friend-rank sandbox). The game does
+    // `_odc = _adp.getOpenDataContext && _adp.getOpenDataContext()` and then
+    // `_odc && _odc.postMessage(...)`. A fake ad object here has no postMessage and
+    // throws during initRank(), aborting boot. Return null = "no open data context".
+    getOpenDataContext: function () { return null; },
     getLaunchOptionsSync: function () { return { scene: 1001, query: {}, path: "", referrerInfo: {} }; },
 
     // --- lifecycle ------------------------------------------------------
