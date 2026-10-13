@@ -15,6 +15,72 @@
   "use strict";
   var noop = function () {};
 
+  // ------------------------------------------------------------------------
+  // 1) Dead-host short-circuit. The game calls IP lookup / ad strategy /
+  //    analytics / account servers that no longer exist. The boot chain waits on
+  //    these callbacks, and a request that hangs (instead of failing) leaves the
+  //    game stuck on the logo. Fail them immediately and asynchronously, exactly
+  //    like a network error, so the game's own error handlers run.
+  // ------------------------------------------------------------------------
+  var DEAD = /(^|\.)(sohu\.com|126\.net|pconline\.com\.cn|gametdd\.com|manhuang\.org|hrgame\.com\.cn|kbb805\.com)$/i;
+  var XHR = window.XMLHttpRequest;
+  if (XHR && XHR.prototype) {
+    var xOpen = XHR.prototype.open, xSend = XHR.prototype.send;
+    XHR.prototype.open = function (m, u) {
+      try { this.__dead = DEAD.test(new URL(u, location.href).hostname); this.__url = u; } catch (e) { this.__dead = false; }
+      return xOpen.apply(this, arguments);
+    };
+    XHR.prototype.send = function () {
+      if (this.__dead) {
+        var x = this;
+        console.warn("[platform-shim] blocked dead host:", x.__url);
+        setTimeout(function () {
+          try { x.dispatchEvent(typeof ProgressEvent === "function" ? new ProgressEvent("error") : new Event("error")); } catch (e) {}
+        }, 0);
+        return;
+      }
+      return xSend.apply(this, arguments);
+    };
+  }
+
+  // ------------------------------------------------------------------------
+  // 2) On-screen log: add ?log=1 to the URL. Shows console output, uncaught
+  //    errors and failed resource loads so a stuck boot can be diagnosed
+  //    without DevTools (handy on phones). Never blocks input.
+  // ------------------------------------------------------------------------
+  if (/[?&]log=1\b/.test(location.search)) {
+    var lines = [], box = null;
+    var paint = function () {
+      if (!box) {
+        if (!document.body) return;
+        box = document.createElement("pre");
+        box.style.cssText = "position:fixed;left:0;top:0;max-width:100%;max-height:60%;overflow:hidden;margin:0;padding:4px;" +
+          "font:11px/1.25 monospace;color:#0f0;background:rgba(0,0,0,.65);z-index:2147483647;pointer-events:none;white-space:pre-wrap;word-break:break-all";
+        document.body.appendChild(box);
+      }
+      box.textContent = lines.slice(-40).join("\n");
+    };
+    var push = function (tag, args) {
+      var t = Array.prototype.map.call(args, function (a) {
+        try { return typeof a === "string" ? a : (a && a.stack) || JSON.stringify(a); } catch (e) { return String(a); }
+      }).join(" ");
+      lines.push(tag + " " + t.slice(0, 300));
+      paint();
+    };
+    ["log", "info", "warn", "error"].forEach(function (k) {
+      var orig = console[k];
+      console[k] = function () { push(k === "error" ? "[ERR]" : k === "warn" ? "[warn]" : "[log]", arguments); return orig.apply(console, arguments); };
+    });
+    window.addEventListener("error", function (e) {
+      var tgt = e.target;
+      if (tgt && tgt !== window && (tgt.src || tgt.href)) push("[LOAD FAIL]", [tgt.src || tgt.href]);
+      else push("[UNCAUGHT]", [e.message + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno]);
+    }, true);
+    window.addEventListener("unhandledrejection", function (e) { push("[REJECT]", [e.reason]); });
+    window.addEventListener("DOMContentLoaded", paint);
+    setInterval(paint, 1000);
+  }
+
   function noopNamespace() { return new Proxy({}, { get: function () { return noop; } }); }
 
   function fakeAd() {
