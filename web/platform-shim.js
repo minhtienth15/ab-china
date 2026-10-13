@@ -95,6 +95,29 @@
     };
   }
 
+  // Ads the game waits on: the real API fires onClose after the ad finishes.
+  // Rewarded video passes {isEnded:true} when the video was watched to the end;
+  // the game grants the reward only then. Interstitial / app box just close.
+  // Add ?reward=0 to the URL to simulate "closed early" (no reward) for testing.
+  var REWARD = !/[?&]reward=0\b/.test(location.search);
+  function fakeClosableAd(rewarded, delay) {
+    var ad = fakeAd(), closers = [];
+    ad.onClose = function (cb) { if (typeof cb === "function") closers.push(cb); };
+    ad.offClose = function (cb) {
+      closers = cb ? closers.filter(function (f) { return f !== cb; }) : [];
+    };
+    ad.show = function () {
+      setTimeout(function () {
+        var res = rewarded ? { isEnded: REWARD } : {};
+        closers.slice().forEach(function (f) {
+          try { f(res); } catch (e) { console.error("[platform-shim] onClose handler:", e); }
+        });
+      }, delay);
+      return Promise.resolve();
+    };
+    return ad;
+  }
+
   // Invoke an options object's callbacks the way the real API does on failure.
   function failFast(msg) {
     return function (o) {
@@ -175,8 +198,10 @@
     setKeepScreenOn: noop, triggerGC: noop,
 
     // --- ads (QQ adds block ads and app boxes) ---------------------------
-    createBannerAd: fakeAd, createInterstitialAd: fakeAd, createRewardedVideoAd: fakeAd,
-    createCustomAd: fakeAd, createGridAd: fakeAd, createBlockAd: fakeAd, createAppBox: fakeAd,
+    createBannerAd: fakeAd, createCustomAd: fakeAd, createGridAd: fakeAd, createBlockAd: fakeAd,
+    createRewardedVideoAd: function () { return fakeClosableAd(true, 700); },
+    createInterstitialAd: function () { return fakeClosableAd(false, 300); },
+    createAppBox: function () { return fakeClosableAd(false, 300); },
 
     // --- storage -> localStorage ----------------------------------------
     getStorageSync: function (k) {
