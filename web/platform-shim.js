@@ -118,8 +118,15 @@
     env: { USER_DATA_PATH: "" }
   };
 
+  // Properties that must read as ABSENT, not as a fake function:
+  //  - webglPlus: laya.core.js / laya.d3.js test `window.qq && window.qq.webglPlus`
+  //    to switch to the native "WebGL Plus" renderer. A truthy fake makes Laya
+  //    pick that path in a plain browser and the canvas stays black.
+  //  - then / symbols: keep the object from looking like a thenable/iterable.
+  var ABSENT = { webglPlus: 1, then: 1 };
   var proxy = new Proxy(real, {
     get: function (t, p) {
+      if (typeof p === "symbol" || ABSENT[p]) return undefined;
       if (p in t) return t[p];
       return function () { return fakeAd(); };
     }
