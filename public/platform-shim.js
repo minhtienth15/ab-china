@@ -87,7 +87,7 @@
     return {
       show: function () { return Promise.resolve(); },
       hide: noop,
-      load: function () { return Promise.resolve(); },
+      load: function () { return Promise.resolve({}); },
       destroy: noop,
       onLoad: noop, offLoad: noop, onError: noop, offError: noop,
       onClose: noop, offClose: noop, onResize: noop, offResize: noop,
