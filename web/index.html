@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <title>愤怒的小鸟 · AB China</title>
+  <title>愤怒的小鸟 · AB China (QQ)</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,10 +22,10 @@
     }
   </script>
 
-  <!-- Neutralize WeChat minigame hooks before the game bundle runs -->
-  <script type="text/javascript" src="wx-shim.js"></script>
+  <!-- Provide window.wx and window.qq before the game bundle runs -->
+  <script type="text/javascript" src="platform-shim.js"></script>
 
-  <!-- LayaAir browser runtimes (NOT the wxmini adapter), in dependency order -->
+  <!-- LayaAir browser runtimes (NOT the qqmini adapter), in dependency order -->
   <script type="text/javascript">
     loadLib("libs/laya.core.js");
     loadLib("libs/laya.ani.js");
