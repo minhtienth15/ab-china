@@ -48,7 +48,7 @@
   //    errors and failed resource loads so a stuck boot can be diagnosed
   //    without DevTools (handy on phones). Never blocks input.
   // ------------------------------------------------------------------------
-  if (/[?&]log=1\b/.test(location.search)) {
+  if (/[?&](log|perf)=1\b/.test(location.search)) {
     var lines = [], box = null;
     var paint = function () {
       if (!box) {
@@ -131,6 +131,8 @@
   var w = window.innerWidth || 1280, h = window.innerHeight || 720,
       dpr = window.devicePixelRatio || 1;
 
+  var openDataStub = { postMessage: noop, onMessage: noop, canvas: null };
+
   var real = {
     getSystemInfoSync: function () {
       return {
@@ -147,11 +149,13 @@
         safeArea: { top: 0, left: 0, right: w, bottom: h, width: w, height: h }
       };
     },
-    // Open data context (WeChat/QQ friend-rank sandbox). The game does
-    // `_odc = _adp.getOpenDataContext && _adp.getOpenDataContext()` and then
-    // `_odc && _odc.postMessage(...)`. A fake ad object here has no postMessage and
-    // throws during initRank(), aborting boot. Return null = "no open data context".
-    getOpenDataContext: function () { return null; },
+    // Open data context (WeChat/QQ friend-rank sandbox). Two different callers:
+    //  - game:  `_odc = getOpenDataContext && getOpenDataContext(); _odc && _odc.postMessage(..)`
+    //  - Laya WXOpenDataViewer (rank view): `getOpenDataContext().postMessage(..)`, no null check.
+    // A fake ad object has no postMessage (game throws); null breaks the viewer. Return a
+    // stub whose postMessage is a no-op. window.sharedCanvas is deliberately left undefined,
+    // so the viewer skips its per-frame texture upload and the rank panel stays empty.
+    getOpenDataContext: function () { return openDataStub; },
     getLaunchOptionsSync: function () { return { scene: 1001, query: {}, path: "", referrerInfo: {} }; },
 
     // --- lifecycle ------------------------------------------------------
