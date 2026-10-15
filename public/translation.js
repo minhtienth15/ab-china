@@ -17,6 +17,11 @@
  * dumpMiss() in the console (or watch the "?log=1" panel) to collect gaps.
  * Text baked into images (e.g. some titles/banners) is out of scope here.
  *
+ * Fonts: fairygui.js ships UIConfig.defaultFont = "SimSun" (a Chinese serif). Where SimSun is
+ * missing the browser draws Chinese with the device's CJK font but Latin with Times New Roman.
+ * The English build therefore switches to a system sans stack (each device uses its own UI font,
+ * like the Chinese build does) and maps CJK/serif font names set by the .fui packages to it.
+ *
  * Loaded only in the English build (index-en.html), after the game bundle.
  */
 (function () {
@@ -135,7 +140,8 @@
   window.__i18nTranslate = translate;
 
   // ---- hooks ------------------------------------------------------------------
-  function patchProp(cls, prop) {
+  function patchProp(cls, prop, map) {
+    map = map || translate;
     if (!cls || !cls.prototype) return false;
     // The accessor may live on a base class; walk up to find it.
     var proto = cls.prototype, desc = null;
@@ -144,10 +150,19 @@
     Object.defineProperty(cls.prototype, prop, {
       configurable: true, enumerable: desc.enumerable,
       get: desc.get,
-      set: function (v) { desc.set.call(this, translate(v)); }
+      set: function (v) { desc.set.call(this, map(v)); }
     });
     return true;
   }
+
+  // ---- fonts ------------------------------------------------------------------
+  var SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  var BAD_FONT = /^\s*(SimSun|NSimSun|\u5b8b\u4f53|\u65b0\u5b8b\u4f53|FangSong|\u4eff\u5b8b|KaiTi|\u6977\u4f53|SimHei|\u9ed1\u4f53|Microsoft ?YaHei|\u5fae\u8f6f\u96c5\u9ed1|YaHei|PingFang[^,]*|\u82f9\u65b9[^,]*|STHeiti|Heiti[^,]*|Songti[^,]*|Noto (Sans|Serif) (CJK|SC)[^,]*|Times[^,]*|serif)\s*$/i;
+  function fixFont(v) {
+    if (typeof v !== "string" || !v || v.indexOf("ui://") === 0) return v;   // keep bitmap-font URLs
+    return BAD_FONT.test(v) ? SANS : v;
+  }
+  window.__i18nFixFont = fixFont;
 
   function install() {
     var fg = window.fgui || window.fairygui;
@@ -156,6 +171,17 @@
     ["GButton", "GLabel"].forEach(function (n) { patchProp(fg[n], "title"); });
     patchProp(fg.GButton, "selectedTitle");
     patchProp(fg.GTextInput, "promptText");
+
+    // Fonts (see header). Fields created from now on pick up UIConfig.defaultFont; the .fui
+    // packages may set an explicit CJK font, so map those too.
+    if (fg.UIConfig) fg.UIConfig.defaultFont = SANS;
+    ["GBasicTextField", "GRichTextField", "GTextInput"].forEach(function (n) { patchProp(fg[n], "font", fixFont); });
+    (function sweep(o, depth) {            // fields created before this hook ran (e.g. loading UI)
+      if (!o || depth > 12) return;
+      try { if (o instanceof fg.GBasicTextField || o instanceof fg.GRichTextField) o.font = o.font; } catch (e) {}
+      var kids = o._children;
+      if (kids) for (var i = 0; i < kids.length; i++) sweep(kids[i], depth + 1);
+    })(fg.GRoot && fg.GRoot.inst, 0);
     // Loading screen / any plain Laya label (not FairyGUI): Laya.Text backs Laya.Label too.
     patchProp(Laya.Text, "text");
 
