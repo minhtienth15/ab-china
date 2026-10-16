@@ -26,23 +26,23 @@
   </script>
 
   <!-- Provide window.wx and window.qq before the game bundle runs -->
-  <script type="text/javascript" src="platform-shim.js"></script>
+  <script type="text/javascript" src="platform-shim.js?v=276c5e17"></script>
 
   <!-- LayaAir browser runtimes (NOT the qqmini adapter), in dependency order -->
   <script type="text/javascript">
-    loadLib("libs/laya.core.js");
-    loadLib("libs/laya.ani.js");
-    loadLib("libs/laya.html.js");
-    loadLib("libs/laya.ui.js");
-    loadLib("libs/laya.d3.js");
-    loadLib("libs/laya.physics.js");
-    loadLib("physics-fix.js");   // real-time physics stepping; must run before js/bundle.js
-    loadLib("libs/fairygui.js");
-    loadLib("libs/rawinflate.min.js");
-    loadLib("js/bundle.js");
+    loadLib("libs/laya.core.js?v=b329d7f0");
+    loadLib("libs/laya.ani.js?v=7f3b24f1");
+    loadLib("libs/laya.html.js?v=04b98208");
+    loadLib("libs/laya.ui.js?v=de92e5eb");
+    loadLib("libs/laya.d3.js?v=a8e97ad7");
+    loadLib("libs/laya.physics.js?v=afdd8a6d");
+    loadLib("physics-fix.js?v=8eaf47ee");   // real-time physics stepping; must run before js/bundle.js
+    loadLib("libs/fairygui.js?v=dbcede7e");
+    loadLib("libs/rawinflate.min.js?v=c8e373dd");
+    loadLib("js/bundle.js?v=cd8467fc");
   </script>
 
   <!-- Desktop scaling + audio-unlock fixes (applied after the bundle boots) -->
-  <script type="text/javascript" src="desktop-fixes.js"></script>
+  <script type="text/javascript" src="desktop-fixes.js?v=d8fbda79"></script>
 </body>
 </html>

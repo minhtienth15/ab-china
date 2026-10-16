@@ -26,27 +26,26 @@
   </script>
 
   <!-- WeChat hook shim + English dictionary, before the game bundle -->
-  <script type="text/javascript" src="platform-shim.js"></script>
-  <script type="text/javascript" src="i18n-dict.js"></script>
-  <script type="text/javascript" src="en-assets-list.js"></script>
-  <script type="text/javascript" src="en-assets.js"></script>
+  <script type="text/javascript" src="platform-shim.js?v=276c5e17"></script>
+  <script type="text/javascript" src="en-assets-list.js?v=f0d2a80e"></script>
+  <script type="text/javascript" src="en-assets.js?v=1a52b4c3"></script>
 
   <!-- LayaAir browser runtimes + game bundle -->
   <script type="text/javascript">
-    loadLib("libs/laya.core.js");
-    loadLib("libs/laya.ani.js");
-    loadLib("libs/laya.html.js");
-    loadLib("libs/laya.ui.js");
-    loadLib("libs/laya.d3.js");
-    loadLib("libs/laya.physics.js");
-    loadLib("physics-fix.js");   // real-time physics stepping; must run before js/bundle.js
-    loadLib("libs/fairygui.js");
-    loadLib("libs/rawinflate.min.js");
-    loadLib("js/bundle.js");
+    loadLib("libs/laya.core.js?v=b329d7f0");
+    loadLib("libs/laya.ani.js?v=7f3b24f1");
+    loadLib("libs/laya.html.js?v=04b98208");
+    loadLib("libs/laya.ui.js?v=de92e5eb");
+    loadLib("libs/laya.d3.js?v=a8e97ad7");
+    loadLib("libs/laya.physics.js?v=afdd8a6d");
+    loadLib("physics-fix.js?v=8eaf47ee");   // real-time physics stepping; must run before js/bundle.js
+    loadLib("libs/fairygui.js?v=dbcede7e");
+    loadLib("libs/rawinflate.min.js?v=c8e373dd");
+    loadLib("js/bundle.js?v=cd8467fc");
   </script>
 
   <!-- Translation hook (patches FairyGUI text) + desktop scaling/audio fixes -->
-  <script type="text/javascript" src="translation.js"></script>
-  <script type="text/javascript" src="desktop-fixes.js"></script>
+  <script type="text/javascript" src="translation.js?v=f6ad6c34"></script>
+  <script type="text/javascript" src="desktop-fixes.js?v=d8fbda79"></script>
 </body>
 </html>

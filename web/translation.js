@@ -130,9 +130,12 @@
     if (typeof v !== "string" || !v || !CJK.test(v)) return v;
     var c = CACHE[v];
     if (c !== undefined) return c;
-    var lead = /^\s*/.exec(v)[0], trail = /\s*$/.exec(v)[0];
-    var core = v.slice(lead.length, v.length - trail.length);
-    var out = DICT[v] != null ? DICT[v] : lead + translateCore(core) + trail;
+    // The game builds some strings with an ASCII ":" after Chinese ("奖励升级倒计时: 00:00") where the
+    // package uses the full-width one; normalise so exact/prefix lookups hit.
+    var norm = v.replace(/([\u3400-\u9fff\uff01-\uff5e]):[ \t]*/g, "$1\uff1a");
+    var lead = /^\s*/.exec(norm)[0], trail = /\s*$/.exec(norm)[0];
+    var core = norm.slice(lead.length, norm.length - trail.length);
+    var out = DICT[v] != null ? DICT[v] : DICT[norm] != null ? DICT[norm] : lead + translateCore(core) + trail;
     if (CJK.test(out)) window.__i18nMiss[v] = (window.__i18nMiss[v] || 0) + 1;
     CACHE[v] = out;
     return out;
@@ -140,7 +143,7 @@
   window.__i18nTranslate = translate;
 
   // ---- hooks ------------------------------------------------------------------
-  function patchProp(cls, prop, map) {
+  function patchProp(cls, prop, map, after) {
     map = map || translate;
     if (!cls || !cls.prototype) return false;
     // The accessor may live on a base class; walk up to find it.
@@ -150,7 +153,7 @@
     Object.defineProperty(cls.prototype, prop, {
       configurable: true, enumerable: desc.enumerable,
       get: desc.get,
-      set: function (v) { desc.set.call(this, map(v)); }
+      set: function (v) { var out = map(v); desc.set.call(this, out); if (after) after(this, v, out); }
     });
     return true;
   }
@@ -164,10 +167,33 @@
   }
   window.__i18nFixFont = fixFont;
 
+  // ---- layout ------------------------------------------------------------------
+  // A few Chinese labels are laid out as a narrow vertical column (one glyph per line). English words
+  // can't stack like that, so rotate such a field 90 degrees and let the text run along the bar.
+  var LAYOUT = { "每观看3个广告视频即可获得": "vertical" };
+  function layoutFix(f, orig, out) {
+    if (LAYOUT[orig] !== "vertical" || f.__abRot) return;
+    try {
+      var W = f.width, H = f.height;
+      if (!(H > W * 2)) return;                              // only the tall, narrow case
+      f.__abRot = true;
+      var fg = window.fgui || window.fairygui;
+      var cx = f.x + W / 2, cy = f.y + H / 2;
+      f.setPivot(0.5, 0.5, false);
+      if (fg && fg.AutoSizeType) f.autoSize = fg.AutoSizeType.None;
+      f.setSize(H, W);
+      f.setXY(cx - H / 2, cy - W / 2);                       // keep the visual centre where it was
+      f.rotation = 90;
+      f.singleLine = true; f.align = "center"; f.valign = "middle";
+      for (var sz = f.fontSize; sz > 12 && f.textWidth > H - 6; sz--) f.fontSize = sz - 1;
+      console.log("[i18n] rotated vertical label " + W + "x" + H + " -> text runs along the bar");
+    } catch (e) { console.warn("[i18n] layout fix failed: " + e); }
+  }
+
   function install() {
     var fg = window.fgui || window.fairygui;
     if (!fg || !window.Laya) return setTimeout(install, 120);
-    ["GBasicTextField", "GTextField", "GRichTextField", "GTextInput"].forEach(function (n) { patchProp(fg[n], "text"); });
+    ["GBasicTextField", "GTextField", "GRichTextField", "GTextInput"].forEach(function (n) { patchProp(fg[n], "text", translate, layoutFix); });
     ["GButton", "GLabel"].forEach(function (n) { patchProp(fg[n], "title"); });
     patchProp(fg.GButton, "selectedTitle");
     patchProp(fg.GTextInput, "promptText");
@@ -176,6 +202,7 @@
     // packages may set an explicit CJK font, so map those too.
     if (fg.UIConfig) fg.UIConfig.defaultFont = SANS;
     ["GBasicTextField", "GRichTextField", "GTextInput"].forEach(function (n) { patchProp(fg[n], "font", fixFont); });
+    patchProp(Laya.Text, "font", fixFont);
     (function sweep(o, depth) {            // fields created before this hook ran (e.g. loading UI)
       if (!o || depth > 12) return;
       try { if (o instanceof fg.GBasicTextField || o instanceof fg.GRichTextField) o.font = o.font; } catch (e) {}
@@ -185,7 +212,7 @@
     // Loading screen / any plain Laya label (not FairyGUI): Laya.Text backs Laya.Label too.
     patchProp(Laya.Text, "text");
 
-    console.log("[i18n] translation installed (" + Object.keys(DICT).length + " entries, " + RULES.length + " rules)");
+    console.log("[i18n] translation installed: build " + (window.__AB_BUILD || "dev") + ", " + Object.keys(DICT).length + " entries, " + RULES.length + " rules");
     window.dumpMiss = function () { console.log(JSON.stringify(Object.keys(window.__i18nMiss).sort())); };
     // Report anything still untranslated, visible in the ?log=1 panel.
     setInterval(function () {
